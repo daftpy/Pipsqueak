@@ -37,6 +37,8 @@ FetchContent_MakeAvailable(RtAudio)
 add_library(pipsqueak STATIC
         src/core/audio_buffer.cpp
         src/dsp/sample_player.cpp
+        include/pipsqueak/audio_io/device_manager.hpp
+        src/audio_io/device_manager.cpp
 )
 
 target_include_directories(pipsqueak
@@ -48,7 +50,7 @@ target_include_directories(pipsqueak
 
 # Link pipsqueak to its dependencies
 target_link_libraries(pipsqueak
-    PRIVATE
+    PUBLIC
         rtaudio
 )
 
