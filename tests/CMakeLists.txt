@@ -17,6 +17,7 @@ FetchContent_MakeAvailable(googletest)
 # Define the test executable
 add_executable(pipsqueak_test
         core/audio_buffer_tests.cpp
+        dsp/sample_player_tests.cpp
 )
 
 target_link_libraries(pipsqueak_test
