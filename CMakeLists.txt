@@ -18,8 +18,6 @@ include(FetchContent)
 ########################
 
 # --- RtAudio ---
-# Mark this variable as advanced to suppress the "unused variable" warning
-# mark_as_advanced(RTAUDIO_ASIO_DIR) # Essential for ASIO compilation support
 FetchContent_Declare(
         RtAudio
         GIT_REPOSITORY https://github.com/thestk/rtaudio.git
@@ -39,6 +37,8 @@ add_library(pipsqueak STATIC
         src/dsp/sample_player.cpp
         include/pipsqueak/audio_io/device_manager.hpp
         src/audio_io/device_manager.cpp
+        include/pipsqueak/engine/engine.hpp
+        src/engine/engine.cpp
 )
 
 target_include_directories(pipsqueak
