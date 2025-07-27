@@ -4,12 +4,14 @@
 
 #include "audio_io/device_manager.hpp"
 
+#include "core/logging.hpp"
+
 namespace pipsqueak::audio_io {
     DeviceManager::DeviceManager(RtAudio& audio) : audio_(audio) {
-        std::cout << "DeviceManager initialized!\n";
+        core::logging::Logger::log("pipsqueak", "DeviceManager initialized!");
 
         if (findDefaultDevice())
-            std::cout << "DeviceManager: a useable device was found\n";
+            core::logging::Logger::log("pipsqueak", "DeviceManager: a useable device was found!");
     }
 
     std::optional<RtAudio::DeviceInfo> DeviceManager::currentDevice() const {
@@ -19,7 +21,8 @@ namespace pipsqueak::audio_io {
     bool DeviceManager::findDefaultDevice() {
         // Check if there are any devices at all.
         if (audio_.getDeviceCount() < 1) {
-            std::cout << "No audio devices found.\n";
+            core::logging::Logger::log("pipsqueak", "DeviceManager: no usable device was found!");
+
             currentDevice_ = std::nullopt;
             return false;
         }
@@ -31,14 +34,16 @@ namespace pipsqueak::audio_io {
         currentDevice_ = info;
 
         // Log details about the selected device
-        std::cout << "Selected output device: " << info.name << "\n"
-                  << "  Output Channels: " << info.outputChannels << "\n"
-                  << "  Sample Rates: ";
+        std::string message = "Selected output device: " + info.name + "\n"
+            + " Output Channels: " + std::to_string(info.outputChannels) + "\n"
+            + " Sample Rates: ";
 
         for (const auto &rate : info.sampleRates) {
-            std::cout << rate << " ";
+            std::string rateString = std::to_string(rate) + " ";
+            message.append(rateString);
         }
-        std::cout << "\n";
+
+        core::logging::Logger::log("pipsqueak", message);
 
         return true;
     }

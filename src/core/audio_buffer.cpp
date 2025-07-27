@@ -1,17 +1,16 @@
 #include "core/audio_buffer.hpp"
-#include "core/audio_buffer.hpp"
 #include "core/channel_view.hpp"
+#include "core/logging.hpp"
 #include <stdexcept>
 #include <string>
-#include <iostream>
 
 namespace pipsqueak::core {
 
     AudioBuffer::AudioBuffer(const unsigned int numChannels, const unsigned int numFrames)
         : numChannels_(numChannels), numFrames_(numFrames), data_(numChannels * numFrames) {
-        // Debug message, can be removed in production.
-        std::cout << "AudioBuffer initalized! Channels: " << numChannels << ", Frames: "
-                  << numFrames << "\n";
+        const std::string message = "AudioBuffer initalized! Channels: " + std::to_string(numChannels) + ", Frames: "
+            + std::to_string(numFrames);
+        logging::Logger::log("pipsqueak", message);
     }
 
     unsigned int AudioBuffer::numChannels() const {

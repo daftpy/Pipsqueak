@@ -2,6 +2,7 @@
 // Created by Daftpy on 7/26/2025.
 //
 #include "pipsqueak/engine/engine.hpp"
+#include "pipsqueak/core/logging.hpp"
 
 namespace pipsqueak::engine {
     int AudioEngine::audioCallback(void *outputBuffer, void * /*inputBuffer*/,
@@ -20,22 +21,35 @@ namespace pipsqueak::engine {
     }
 
     AudioEngine::AudioEngine() : audio_(std::make_unique<RtAudio>()) {
-        std::cout << "AudioEngine initialized!\n";
+        core::logging::Logger::log("pipsqueak", "AudioEngine initialized!");
         // std::cout << "AudioEngine - status running: " << isRunning() << "\n";
     }
 
     AudioEngine::~AudioEngine() {
-        std::cout << "AudioEngine - status running: " << isRunning() << "\n";
-        std::cout << "AudioEngine destroyed!\n";
+        core::logging::Logger::log("pipsqueak", "AudioEngine destroyed!");
     }
 
     int AudioEngine::processBlock(void* outputBuffer, unsigned int numFrames) {
-        // TODO: Process audio
+        // 1. Clear the buffer to silence
+        mixerBuffer_->fill(0.0);
+
+        // 2. Process all active audio sources, mixing them into the buffer.
+        for (const auto& source : sources_) {
+            source->process(*mixerBuffer_);
+        }
+
+        // 3. TODO: process a master effect chain
+
+        // 4. Copy the final mixed audio to the hardware output buffer.
+        double* hardwareBuffer = static_cast<double*>(outputBuffer);
+        std::copy(mixerBuffer_->data().begin(), mixerBuffer_->data().end(), hardwareBuffer);
+
         return 0;
     }
 
     bool AudioEngine::startStream(unsigned int deviceId, unsigned int sampleRate, unsigned int bufferSize) {
-        std::cout << "AudioEngine - starting stream\n";
+        core::logging::Logger::log("pipsqueak", "starting stream (sample rate: " +
+            std::to_string(sampleRate) + " | buffer: " + std::to_string(bufferSize) + ")");
         const RtAudio::DeviceInfo info = audio_->getDeviceInfo(deviceId);
 
         // Set the output parameters
@@ -64,7 +78,7 @@ namespace pipsqueak::engine {
             return false;
         }
 
-        std::cout << "AudioEngine stream started successfully!\n";
+        core::logging::Logger::log("pipsqueak", "AudioEngine stream started successfully!");
         return true;
     }
 
@@ -82,7 +96,7 @@ namespace pipsqueak::engine {
         if (audio_->isStreamOpen())
             audio_->closeStream();
 
-        std::cout << "AudioEngine has stopped the stream\n";
+        core::logging::Logger::log("pipsqueak", "AudioEngine has stopped the stream!");
         return true;
     }
 

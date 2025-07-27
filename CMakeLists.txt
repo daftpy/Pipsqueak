@@ -39,6 +39,7 @@ add_library(pipsqueak STATIC
         src/audio_io/device_manager.cpp
         include/pipsqueak/engine/engine.hpp
         src/engine/engine.cpp
+        include/pipsqueak/core/logging.hpp
 )
 
 target_include_directories(pipsqueak
