@@ -26,7 +26,7 @@ namespace pipsqueak::core::logging {
             #ifdef _WIN32
                 localtime_s(&tm, &timeT);
             #else
-                localtime_r(&time_t, &tm);
+                localtime_r(&timeT, &tm);
             #endif
 
             std::cout << "[" << std::put_time(&tm, "%T") << "] " // HH:MM:SS
