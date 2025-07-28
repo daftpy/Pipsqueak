@@ -82,22 +82,20 @@ namespace pipsqueak::engine {
         return true;
     }
 
-    bool AudioEngine::stopStream() {
+    void AudioEngine::stopStream() {
         if (!isRunning())
-            return false;
+            return;
 
         if (audio_->isStreamRunning()) {
             if (const auto err = audio_->stopStream(); err != RTAUDIO_NO_ERROR)
-                std::cerr << "AudioEngine failed to stop stream: "
+                std::cerr << "AudioEngine failed to stop the stream: "
                 << audio_->getErrorText() << "\n";
-            return false;
         }
 
         if (audio_->isStreamOpen())
             audio_->closeStream();
 
         core::logging::Logger::log("pipsqueak", "AudioEngine has stopped the stream!");
-        return true;
     }
 
     bool AudioEngine::isRunning() const {

@@ -39,12 +39,12 @@ namespace pipsqueak::engine {
          * @brief Stops and closes the currently active audio stream.
          * @return True if the stream was stopped successfully, false otherwise.
          */
-        bool stopStream();
+        void stopStream();
 
         /**
          * @brief Checks if the audio stream is currently running.
          */
-        bool isRunning() const;
+        [[nodiscard]] bool isRunning() const;
 
         /**
          * @brief Gets a reference to the underlying RtAudio instance for querying.
