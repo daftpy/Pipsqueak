@@ -7,6 +7,9 @@
 
 #include <RtAudio.h>
 #include <optional>
+#include <vector>
+
+#include "types.hpp"
 
 namespace pipsqueak::audio_io {
     /**
@@ -26,7 +29,9 @@ namespace pipsqueak::audio_io {
          * @brief Gets information about the currently selected audio device.
          * @return An optional containing the device info, or std::nullopt if no device is selected.
          */
-        std::optional<RtAudio::DeviceInfo> currentDevice() const;
+        [[nodiscard]] std::optional<AudioDevice> currentDevice() const;
+
+        [[nodiscard]] std::vector<AudioDevice> allUsableDevices() const;
 
     private:
         /**

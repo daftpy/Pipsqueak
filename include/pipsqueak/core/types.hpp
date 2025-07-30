@@ -2,8 +2,8 @@
 // Created by Daftpy on 7/24/2025.
 //
 
-#ifndef TYPES_HPP
-#define TYPES_HPP
+#ifndef CORE_TYPES_HPP
+#define CORE_TYPES_HPP
 #include <vector>
 
 namespace pipsqueak::core {
@@ -11,4 +11,4 @@ namespace pipsqueak::core {
     using PCMData = std::vector<double>;
 }
 
-#endif //TYPES_HPP
+#endif //CORE_TYPES_HPP
