@@ -13,17 +13,17 @@
 
 namespace pipsqueak::audio_io {
     /**
-     * @class DeviceManager
+     * @class DeviceScanner
      * @brief A utility class for querying and selecting audio hardware devices.
      * It inspects an RtAudio instance but does not own it.
      */
-    class DeviceManager {
+    class DeviceScanner {
     public:
         /**
          * @brief Constructs a DeviceManager and attempts to find a default output device.
          * @param audio A reference to an active RtAudio instance.
          */
-        explicit DeviceManager(RtAudio& audio);
+        explicit DeviceScanner(RtAudio& audio);
 
         /**
          * @brief Gets information about the currently selected audio device.

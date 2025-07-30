@@ -35,8 +35,8 @@ FetchContent_MakeAvailable(RtAudio)
 add_library(pipsqueak STATIC
         src/core/audio_buffer.cpp
         src/dsp/sample_player.cpp
-        include/pipsqueak/audio_io/device_manager.hpp
-        src/audio_io/device_manager.cpp
+        include/pipsqueak/audio_io/device_scanner.hpp
+        src/audio_io/device_scanner.cpp
         include/pipsqueak/engine/engine.hpp
         src/engine/engine.cpp
         include/pipsqueak/core/logging.hpp

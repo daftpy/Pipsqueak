@@ -18,7 +18,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(pipsqueak_test
         unit/core/audio_buffer_tests.cpp
         unit/dsp/sample_player_tests.cpp
-        integration/audio_io/device_manager_tests.cpp
+        integration/audio_io/device_scanner_tests.cpp
         integration/engine/engine_tests.cpp
 )
 

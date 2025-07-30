@@ -2,14 +2,14 @@
 // Created by Daftpy on 7/26/2025.
 //
 #include <gtest/gtest.h>
-#include <pipsqueak/audio_io/device_manager.hpp>
+#include <pipsqueak/audio_io/device_scanner.hpp>
 #include <pipsqueak/engine/engine.hpp>
 
 /// Tests the engine can start a stream using the device id provided by the device manager.
 TEST(EngineIntegrationTest, StartsStreamWithGivenDevice) {
     // ARRANGE: Create the device manager and engine objects
     pipsqueak::engine::AudioEngine engine;
-    const pipsqueak::audio_io::DeviceManager deviceManager(engine.audio());
+    const pipsqueak::audio_io::DeviceScanner deviceManager(engine.audio());
 
     // ACT: Start the stream
     engine.startStream(deviceManager.currentDevice().value().ID, 44100, 512);
@@ -22,7 +22,7 @@ TEST(EngineIntegrationTest, StartsStreamWithGivenDevice) {
 TEST(EngineIntegrationTest, StopsStreamCorrectly) {
     // ARRANGE: Create the device manager and engine objects
     pipsqueak::engine::AudioEngine engine;
-    const pipsqueak::audio_io::DeviceManager deviceManager(engine.audio());
+    const pipsqueak::audio_io::DeviceScanner deviceManager(engine.audio());
 
     // Start the stream and check it is running
     engine.startStream(deviceManager.currentDevice().value().ID, 44100, 512);

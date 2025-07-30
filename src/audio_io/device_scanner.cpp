@@ -2,19 +2,19 @@
 // Created by Daftpy on 7/25/2025.
 //
 
-#include "audio_io/device_manager.hpp"
+#include "audio_io/device_scanner.hpp"
 
 #include "core/logging.hpp"
 
 namespace pipsqueak::audio_io {
-    DeviceManager::DeviceManager(RtAudio& audio) : audio_(audio) {
+    DeviceScanner::DeviceScanner(RtAudio& audio) : audio_(audio) {
         core::logging::Logger::log("pipsqueak", "DeviceManager initialized!");
 
         if (findDefaultDevice())
             core::logging::Logger::log("pipsqueak", "DeviceManager: a useable device was found!");
     }
 
-    std::optional<AudioDevice> DeviceManager::currentDevice() const {
+    std::optional<AudioDevice> DeviceScanner::currentDevice() const {
         if (currentDevice_.has_value()) {
             const auto device = currentDevice_.value();
             core::logging::Logger::log("pipsqueak", device.name);
@@ -25,7 +25,7 @@ namespace pipsqueak::audio_io {
         return std::nullopt;
     }
 
-    std::vector<AudioDevice> DeviceManager::allUsableDevices() const {
+    std::vector<AudioDevice> DeviceScanner::allUsableDevices() const {
         const auto ids = audio_.getDeviceIds();
         std::vector<AudioDevice> devices;
 
@@ -36,7 +36,7 @@ namespace pipsqueak::audio_io {
         return devices;
     }
 
-    bool DeviceManager::findDefaultDevice() {
+    bool DeviceScanner::findDefaultDevice() {
         // Check if there are any devices at all.
         if (audio_.getDeviceCount() < 1) {
             core::logging::Logger::log("pipsqueak", "DeviceManager: no usable device was found!");
