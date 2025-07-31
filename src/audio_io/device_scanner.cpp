@@ -19,7 +19,7 @@ namespace pipsqueak::audio_io {
             const auto device = currentDevice_.value();
             core::logging::Logger::log("pipsqueak", device.name);
 
-            AudioDevice info = {device.ID, device.name, device.isDefaultOutput, device.outputChannels};
+            AudioDevice info = {device.ID, device.name, device.sampleRates, device.outputChannels, device.isDefaultOutput};
             return info;
         }
         return std::nullopt;
@@ -31,7 +31,7 @@ namespace pipsqueak::audio_io {
 
         for (const auto id : ids) {
             const auto info = audio_.getDeviceInfo(id);
-            devices.emplace_back(info.ID, info.name, info.isDefaultOutput, info.outputChannels);
+            devices.emplace_back(info.ID, info.name, info.sampleRates, info.outputChannels, info.isDefaultOutput);
         }
         return devices;
     }
@@ -64,5 +64,21 @@ namespace pipsqueak::audio_io {
         core::logging::Logger::log("pipsqueak", message);
 
         return true;
+    }
+
+    AudioDevice DeviceScanner::deviceInfo(const unsigned int id) const {
+        const auto info = audio_.getDeviceInfo(id);
+
+        // Log details about the selected device
+        std::string message = "Selected output device: " + info.name + "\n"
+            + " Output Channels: " + std::to_string(info.outputChannels) + "\n"
+            + " Sample Rates: ";
+
+        for (const auto &rate : info.sampleRates) {
+            std::string rateString = std::to_string(rate) + " ";
+            message.append(rateString);
+        }
+
+        return {info.ID, info.name, info.sampleRates, info.outputChannels, info.isDefaultOutput};
     }
 }
