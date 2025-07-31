@@ -14,7 +14,7 @@ namespace pipsqueak::audio_io {
             core::logging::Logger::log("pipsqueak", "DeviceManager: a useable device was found!");
     }
 
-    std::optional<AudioDevice> DeviceScanner::currentDevice() const {
+    std::optional<AudioDevice> DeviceScanner::defaultDevice() const {
         if (currentDevice_.has_value()) {
             const auto device = currentDevice_.value();
             core::logging::Logger::log("pipsqueak", device.name);

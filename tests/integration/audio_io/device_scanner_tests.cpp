@@ -16,11 +16,11 @@ TEST(DeviceManagerIntegrationTest, FindDefaultDeviceBehavesLogically) {
     // ASSERT: Check for logical consistency based on the system state.
     if (audio.getDeviceCount() < 1) {
         // If there are no devices, we expect the search to fail.
-        EXPECT_FALSE(scanner.currentDevice().has_value());
+        EXPECT_FALSE(scanner.defaultDevice().has_value());
     } else {
         // If there ARE devices, we expect the search to succeed.
-        ASSERT_TRUE(scanner.currentDevice().has_value());
+        ASSERT_TRUE(scanner.defaultDevice().has_value());
         // And the found device should have output channels.
-        EXPECT_GT(scanner.currentDevice()->outputChannels, 0);
+        EXPECT_GT(scanner.defaultDevice()->outputChannels, 0);
     }
 }

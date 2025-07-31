@@ -12,7 +12,7 @@ TEST(EngineIntegrationTest, StartsStreamWithGivenDevice) {
     const pipsqueak::audio_io::DeviceScanner deviceManager(engine.audio());
 
     // ACT: Start the stream
-    engine.startStream(deviceManager.currentDevice().value().ID, 44100, 512);
+    engine.startStream(deviceManager.defaultDevice().value().ID, 44100, 512);
 
     // ASSERT: Check that engine's isRunning method returns true
     EXPECT_TRUE(engine.isRunning());
@@ -25,7 +25,7 @@ TEST(EngineIntegrationTest, StopsStreamCorrectly) {
     const pipsqueak::audio_io::DeviceScanner deviceManager(engine.audio());
 
     // Start the stream and check it is running
-    engine.startStream(deviceManager.currentDevice().value().ID, 44100, 512);
+    engine.startStream(deviceManager.defaultDevice().value().ID, 44100, 512);
     ASSERT_TRUE(engine.isRunning());
 
     // ACT: Stop the stream
