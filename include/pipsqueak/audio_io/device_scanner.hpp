@@ -35,8 +35,6 @@ namespace pipsqueak::audio_io {
 
         [[nodiscard]] AudioDevice deviceInfo(unsigned int id) const;
 
-        void setCurrentDevice(unsigned int id);
-
     private:
         /**
          * @brief Scans for and selects the system's default output device.
