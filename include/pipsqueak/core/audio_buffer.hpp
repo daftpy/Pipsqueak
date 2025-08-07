@@ -5,6 +5,7 @@
 #ifndef AUDIO_BUFFER_HPP
 #define AUDIO_BUFFER_HPP
 
+#include "logging.hpp"
 #include "types.hpp"
 
 namespace pipsqueak::core {
@@ -24,24 +25,51 @@ namespace pipsqueak::core {
          * @param numChannels The number of channels (e.g., 2 for stereo).
          * @param numFrames The number of sample frames (the length of the buffer).
          */
-        AudioBuffer(unsigned int numChannels, unsigned numFrames);
+        AudioBuffer(unsigned int numChannels, unsigned int numFrames);
+
+        /**
+         * @brief Constructs and populates a buffer from existing sample data in one step.
+         * @details This is the key to creating const AudioBuffers, as the data is copied
+         * during construction and does not require a non-const method call later.
+         * @tparam SampleType The numeric type of the source data (e.g., float, double).
+         * @param numChannels The number of channels in the source data.
+         * @param numFrames The number of sample frames in the source data.
+         * @param initialData A pointer to the interleaved source data to copy from.
+         */
+        template<typename SampleType>
+        AudioBuffer(const unsigned int numChannels, const unsigned int numFrames, const SampleType* initialData)
+            : numChannels_(numChannels),
+              numFrames_(numFrames),
+              data_(numChannels * numFrames) // Pre-allocate the vector
+        {
+            if (!initialData) {
+                // throw std::invalid_argument("initialData cannot be null.");
+                logging::Logger::log("pipsqueak", "Cannot create an AudioBuffer with no initial data");
+            } else {
+                // Loop through the source data, convert, and copy it into our internal buffer.
+                const size_t totalSamples = static_cast<size_t>(numChannels_) * numFrames_;
+                for (size_t i = 0; i < totalSamples; ++i) {
+                 data_[i] = static_cast<double>(initialData[i]);
+                }
+            }
+        }
 
         /**
          * @brief Gets the number of audio channels in the buffer.
          */
-        unsigned int numChannels() const;
+        [[nodiscard]] unsigned int numChannels() const;
 
         /**
          * @brief Gets the number of sample frames (i.e., the length) of the buffer.
          */
-        unsigned int numFrames() const;
+        [[nodiscard]] unsigned int numFrames() const;
 
        /**
         * @brief Returns a read-write view for a single channel.
         */
         WritableChannelView channel(unsigned int channelNum);
 
-        ReadOnlyChannelView channel(unsigned int channelNum) const;
+        [[nodiscard]] ReadOnlyChannelView channel(unsigned int channelNum) const;
 
         /**
          * @brief Provides direct access to the raw interleaved sample data.
@@ -57,7 +85,7 @@ namespace pipsqueak::core {
          * @return A reference to the sample.
          * @throws std::out_of_range if access is out of bounds.
          */
-        const double& at(unsigned int channelNum, unsigned int frameNum) const;
+        [[nodiscard]] const double& at(unsigned int channelNum, unsigned int frameNum) const;
         double& at(unsigned int channelNum, unsigned int frameNum);
 
         /**
