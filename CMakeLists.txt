@@ -41,6 +41,8 @@ add_library(pipsqueak STATIC
         src/engine/engine.cpp
         include/pipsqueak/core/logging.hpp
         include/pipsqueak/audio_io/types.hpp
+        include/pipsqueak/core/buffer_store.hpp
+        src/core/buffer_store.cpp
 )
 
 target_include_directories(pipsqueak

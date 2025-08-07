@@ -20,6 +20,7 @@ add_executable(pipsqueak_test
         unit/dsp/sample_player_tests.cpp
         integration/audio_io/device_scanner_tests.cpp
         integration/engine/engine_tests.cpp
+        unit/core/buffer_store_tests.cpp
 )
 
 target_link_libraries(pipsqueak_test
