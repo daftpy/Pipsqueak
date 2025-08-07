@@ -41,8 +41,10 @@ namespace pipsqueak::engine {
         // 3. TODO: process a master effect chain
 
         // 4. Copy the final mixed audio to the hardware output buffer.
-        double* hardwareBuffer = static_cast<double*>(outputBuffer);
-        std::copy(mixerBuffer_->data().begin(), mixerBuffer_->data().end(), hardwareBuffer);
+        auto* hardwareBuffer = static_cast<double*>(outputBuffer);
+
+        const size_t samplesToCopy = static_cast<size_t>(numFrames) * mixerBuffer_->numChannels();
+        std::copy_n(mixerBuffer_->data().begin(), samplesToCopy, hardwareBuffer);
 
         return 0;
     }
@@ -108,5 +110,6 @@ namespace pipsqueak::engine {
 
     void AudioEngine::addSource(std::shared_ptr<dsp::AudioSource> source) {
         // TODO: implement adding multiple sound sources to be mixed down into the stream
+        sources_.push_back(std::move(source));
     }
 }

@@ -40,7 +40,7 @@ namespace pipsqueak::dsp {
          * @brief Gets the current playback position.
          * @return The current position, in frames.
          */
-        size_t getPosition() const;
+        [[nodiscard]] size_t getPosition() const;
 
         /**
          * @brief Renders the next block of audio into the output buffer.
@@ -52,7 +52,7 @@ namespace pipsqueak::dsp {
          * @brief Checks if the player is currently inactive.
          * @return True if not playing, false otherwise.
          */
-        bool isFinished() const override;
+        [[nodiscard]] bool isFinished() const override;
 
     private:
         // The shared audio data this player will read from.
