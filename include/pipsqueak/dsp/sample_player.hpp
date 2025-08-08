@@ -18,7 +18,7 @@ namespace pipsqueak::dsp {
          * @brief Constructs a player with a shared pointer to the audio data.
          * @param sampleData A shared pointer to the AudioBuffer to be played.
          */
-        explicit SamplePlayer(std::shared_ptr<core::AudioBuffer> sampleData);
+        explicit SamplePlayer(std::shared_ptr<const core::AudioBuffer> sampleData);
 
         /**
          * @brief Starts playback from the beginning of the sample.
@@ -56,7 +56,7 @@ namespace pipsqueak::dsp {
 
     private:
         // The shared audio data this player will read from.
-        std::shared_ptr<core::AudioBuffer> sampleData_;
+        std::shared_ptr<const core::AudioBuffer> sampleData_;
 
         // The current playback position, measured in frames.
         size_t readPosition_{0};

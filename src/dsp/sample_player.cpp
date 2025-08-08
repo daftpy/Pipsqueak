@@ -6,7 +6,7 @@
 #include "core/logging.hpp"
 
 namespace pipsqueak::dsp {
-    SamplePlayer::SamplePlayer(std::shared_ptr<core::AudioBuffer> sampleData)
+    SamplePlayer::SamplePlayer(std::shared_ptr<const core::AudioBuffer> sampleData)
     : sampleData_(std::move(sampleData)) {
         core::logging::Logger::log("pipsqueak", "SamplePlayer initialized!");
     }

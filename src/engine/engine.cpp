@@ -65,7 +65,7 @@ namespace pipsqueak::engine {
         // Try to open the stream
         if (const auto err = audio_->openStream(
             &outputParams, nullptr, RTAUDIO_FLOAT64,
-            sampleRate, &negotiatedBufferSize, &AudioEngine::audioCallback, nullptr
+            sampleRate, &negotiatedBufferSize, &AudioEngine::audioCallback, this
         ); err != RTAUDIO_NO_ERROR) {
             std::cerr << "AudioEngine failed to open stream: " << audio_->getErrorText() << "\n";
             return false;
