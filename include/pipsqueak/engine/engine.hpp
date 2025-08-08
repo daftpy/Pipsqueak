@@ -51,6 +51,7 @@ namespace pipsqueak::engine {
          */
         RtAudio& audio();
 
+        // Temporary home for adding audio sources
         void addSource(std::shared_ptr<dsp::AudioSource> source);
 
     private:
@@ -76,6 +77,9 @@ namespace pipsqueak::engine {
 
         // Temp reusable buffer to avoid real-time allocation in the callback
         std::unique_ptr<core::AudioBuffer> mixerBuffer_{nullptr};
+
+       // Atomic pointer for the real time audio thread to read from
+       std::shared_ptr<const std::vector<std::shared_ptr<dsp::AudioSource>>> activeSources_;
     };
 }
 

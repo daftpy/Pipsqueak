@@ -22,7 +22,8 @@ namespace pipsqueak::engine {
 
     AudioEngine::AudioEngine() : audio_(std::make_unique<RtAudio>()) {
         core::logging::Logger::log("pipsqueak", "AudioEngine initialized!");
-        // std::cout << "AudioEngine - status running: " << isRunning() << "\n";
+        const auto initialSources = std::make_shared<const std::vector<std::shared_ptr<dsp::AudioSource>>>();
+        std::atomic_store(&activeSources_, initialSources);
     }
 
     AudioEngine::~AudioEngine() {
@@ -30,11 +31,13 @@ namespace pipsqueak::engine {
     }
 
     int AudioEngine::processBlock(void* outputBuffer, unsigned int numFrames) {
-        // 1. Clear the buffer to silence
+        // 1. Get the current list of sources with an atomic load.
+        const auto sourcesToProcess = std::atomic_load(&activeSources_);
+
+        // 2. Clear the buffer to silence
         mixerBuffer_->fill(0.0);
 
-        // 2. Process all active audio sources, mixing them into the buffer.
-        for (const auto& source : sources_) {
+        for (const auto& source : *sourcesToProcess) {
             source->process(*mixerBuffer_);
         }
 
@@ -109,7 +112,21 @@ namespace pipsqueak::engine {
     }
 
     void AudioEngine::addSource(std::shared_ptr<dsp::AudioSource> source) {
-        // TODO: implement adding multiple sound sources to be mixed down into the stream
-        sources_.push_back(std::move(source));
+        // This function is non-blocking and safe to call from any thread.
+
+        // Atomically load the list of sources.
+        const auto currentSources = std::atomic_load(&activeSources_);
+
+        // Create a new, *mutable* list of sources by copying the current list.
+        auto mutableSources = std::make_shared<std::vector<std::shared_ptr<dsp::AudioSource>>>(*currentSources);
+
+        // Modify the new list by adding the new source.
+        mutableSources->push_back(std::move(source));
+
+        // Make it a const vector to be safely stored.
+        const std::shared_ptr<const std::vector<std::shared_ptr<dsp::AudioSource>>> finalSources = mutableSources;
+
+        // 5. Atomically swap the active pointer to point to the newly prepared list.
+        std::atomic_store(&activeSources_, finalSources);
     }
 }
