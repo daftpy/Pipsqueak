@@ -43,6 +43,8 @@ add_library(pipsqueak STATIC
         include/pipsqueak/audio_io/types.hpp
         include/pipsqueak/core/buffer_store.hpp
         src/core/buffer_store.cpp
+        include/pipsqueak/dsp/mixer.hpp
+        src/dsp/mixer.cpp
 )
 
 target_include_directories(pipsqueak

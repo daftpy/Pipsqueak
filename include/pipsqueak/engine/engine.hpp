@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "pipsqueak/dsp/audio_source.hpp"
+#include "pipsqueak/dsp/mixer.hpp"
 
 namespace pipsqueak::engine {
     /**
@@ -51,14 +52,17 @@ namespace pipsqueak::engine {
          */
         RtAudio& audio();
 
-        // Temporary home for adding audio sources
-        void addSource(std::shared_ptr<dsp::AudioSource> source);
+        /**
+         * @brief Gets a reference to the engine's master mixer.
+         * @return A reference to the master Mixer instance.
+         */
+        dsp::Mixer& masterMixer();
 
     private:
-       /**
-        * @brief The static C-style callback function passed to RtAudio.
-        * Acts as a bridge to the processBlock member function.
-        */
+        /**
+         * @brief The static C-style callback function passed to RtAudio.
+         * Acts as a bridge to the processBlock member function.
+         */
         static int audioCallback(void *outputBuffer, void * /*inputBuffer*/,
             unsigned int nFrames, double /*streamTime*/, RtAudioStreamStatus status,
             void *userData);
@@ -72,14 +76,11 @@ namespace pipsqueak::engine {
         // The unique_ptr manages the lifetime of the RtAudio object.
         std::unique_ptr<RtAudio> audio_;
 
-        // A simple placeholder mixer of all sound sources
-        std::vector<std::shared_ptr<dsp::AudioSource>> sources_;
-
-        // Temp reusable buffer to avoid real-time allocation in the callback
+        // A reusable buffer to avoid real-time allocation in the audio callback.
         std::unique_ptr<core::AudioBuffer> mixerBuffer_{nullptr};
 
-       // Atomic pointer for the real time audio thread to read from
-       std::shared_ptr<const std::vector<std::shared_ptr<dsp::AudioSource>>> activeSources_;
+        // The master mixer; the single entry point for all audio to be rendered.
+        dsp::Mixer masterMixer_;
     };
 }
 
