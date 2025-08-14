@@ -104,3 +104,56 @@ TEST(ChannelViewTest, RawSpanConstIsConstAndReadable) {
         EXPECT_FLOAT_EQ(span.at(i), 0.1f * static_cast<float>(i + 1));
     }
 }
+
+/// Iterator (writable): range-for writes only the targeted channel
+TEST(ChannelViewTest, IteratorWritableRangeForModifiesOnlyThatChannel) {
+    constexpr unsigned int numFrames{6};
+    AudioBuffer buffer(2, numFrames);
+    buffer.fill(0.0f);
+
+    // Write via strided iterator
+    for (auto& s : buffer.channel(1)) {
+        s = 0.25f;
+    }
+
+    for (size_t i = 0; i < numFrames; ++i) {
+        EXPECT_FLOAT_EQ(buffer.at(1, i), 0.25f); // modified channel
+        EXPECT_FLOAT_EQ(buffer.at(0, i), 0.0f);  // untouched channel
+    }
+}
+
+/// Iterator (const): range-for reads all frames with expected values
+TEST(ChannelViewTest, IteratorConstRangeForReadsAllFrames) {
+    constexpr unsigned int numFrames{5};
+    AudioBuffer buffer(2, numFrames);
+
+    // Fill channel 0 with an arithmetic sequence
+    for (size_t i = 0; i < numFrames; ++i) {
+        buffer.at(0, i) = 0.1f * static_cast<float>(i + 1); // 0.1, 0.2, ...
+    }
+
+    const AudioBuffer& cbuf = buffer;
+    float sum = 0.0f;
+    for (auto s : cbuf.channel(0)) { // const iterator yields by value (const ref)
+        sum += s;
+    }
+
+    const float expected = 0.1f * (1 + numFrames) * (numFrames / 2.0f); // sum of 0.1..0.1*n
+    EXPECT_FLOAT_EQ(sum, expected);
+}
+
+/// Iterator: pointer stride equals interleave stride (verifies ++ steps correctly)
+TEST(ChannelViewTest, IteratorStrideMatchesInterleave) {
+    AudioBuffer buffer(3, 4); // 3 channels, 4 frames
+    auto view = buffer.channel(2);
+
+    auto it0 = view.begin();
+    auto it1 = it0; ++it1;
+
+    // Taking addresses of dereferenced refs to compare pointer distance in Samples
+    const auto* p0 = &(*it0);
+    const auto* p1 = &(*it1);
+
+    const ptrdiff_t elemStride = p1 - p0; // measured in Sample elements
+    EXPECT_EQ(elemStride, static_cast<ptrdiff_t>(buffer.interleaveStride()));
+}
