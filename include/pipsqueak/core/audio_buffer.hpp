@@ -28,13 +28,14 @@ namespace pipsqueak::core {
         AudioBuffer(unsigned int numChannels, unsigned int numFrames);
 
         /**
-         * @brief Constructs and populates a buffer from existing sample data in one step.
-         * @details This is the key to creating const AudioBuffers, as the data is copied
-         * during construction and does not require a non-const method call later.
-         * @tparam SampleType The numeric type of the source data (e.g., float, double).
-         * @param numChannels The number of channels in the source data.
-         * @param numFrames The number of sample frames in the source data.
-         * @param initialData A pointer to the interleaved source data to copy from.
+         * @brief Constructs and populates a buffer from existing interleaved sample data.
+         * @details Copies and converts from @p initialData into internal storage.
+         *          If @p initialData is nullptr, the buffer is **zero-filled** (policy choice)
+         *          and construction succeeds.
+         * @tparam SampleType Numeric type of the source data (e.g., float, double, int16_t).
+         * @param numChannels Number of channels in the source data.
+         * @param numFrames   Number of frames in the source data.
+         * @param initialData Pointer to interleaved source data (may be nullptr to zero-fill).
          */
         template<typename SampleType>
         AudioBuffer(const unsigned int numChannels, const unsigned int numFrames, const SampleType* initialData)
@@ -43,14 +44,17 @@ namespace pipsqueak::core {
               data_(static_cast<size_t>(numChannels) * static_cast<size_t>(numFrames)) // Pre-allocate the vector
         {
             if (!initialData) {
-                // throw std::invalid_argument("initialData cannot be null.");
-                logging::Logger::log("pipsqueak", "Cannot create an AudioBuffer with no initial data");
-            } else {
-                // Loop through the source data, convert, and copy it into our internal buffer.
-                const size_t totalSamples = static_cast<size_t>(numChannels_) * static_cast<size_t>(numFrames_);
-                for (size_t i = 0; i < totalSamples; ++i) {
-                 data_[i] = static_cast<Sample>(initialData[i]);
-                }
+             // Policy: zero-fill when no initial data is provided.
+             std::fill(data_.begin(), data_.end(), static_cast<Sample>(0));
+             logging::Logger::log("pipsqueak",
+                 "AudioBuffer: null initialData; zero-filled buffer");
+                 return;
+            }
+
+            // Convert & copy from interleaved source
+            const size_t total = static_cast<size_t>(numChannels_) * static_cast<size_t>(numFrames_);
+            for (size_t i = 0; i < total; ++i) {
+                data_[i] = static_cast<Sample>(initialData[i]);
             }
         }
 

@@ -23,6 +23,34 @@ TEST(AudioBufferTest, ConstructorInitializesStateCorrectly) {
     EXPECT_EQ(buffer.data().size(), static_cast<size_t>(numChannels) * numFrames);
 }
 
+/// Templated ctor zero-fills when initialData is nullptr
+TEST(AudioBufferTest, TemplatedCtorZeroFillsOnNullData) {
+    using pipsqueak::core::Sample;
+    constexpr unsigned int ch = 2, fr = 5;
+    const float* src = nullptr;
+
+    const AudioBuffer buf(ch, fr, src);
+
+    for (const Sample s : buf.data()) {
+        EXPECT_FLOAT_EQ(s, 0.0f);
+    }
+}
+
+/// Templated ctor copies and converts from double* to internal float storage
+TEST(AudioBufferTest, TemplatedCtorCopiesAndConvertsFromDouble) {
+    constexpr unsigned int ch = 2, fr = 3;
+    constexpr double src[] = { 0.1, -0.2, 0.3, 0.4, -0.5, 0.6 }; // interleaved L,R,L,R,...
+
+    pipsqueak::core::AudioBuffer buf(ch, fr, src);
+
+    EXPECT_FLOAT_EQ(buf.at(0,0),  0.1f);
+    EXPECT_FLOAT_EQ(buf.at(1,0), -0.2f);
+    EXPECT_FLOAT_EQ(buf.at(0,1),  0.3f);
+    EXPECT_FLOAT_EQ(buf.at(1,1),  0.4f);
+    EXPECT_FLOAT_EQ(buf.at(0,2), -0.5f);
+    EXPECT_FLOAT_EQ(buf.at(1,2),  0.6f);
+}
+
 /// Tests that a specific sample can be accessed inside the audio buffer
 TEST(AudioBufferTest, AtMethodProvidesCorrectAccess) {
     constexpr unsigned int numChannels{2};
