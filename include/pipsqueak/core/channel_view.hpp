@@ -24,24 +24,33 @@ namespace pipsqueak::core {
 
         /**
          * @brief Provides read-write access to a sample by its frame index.
-         * @note This method is only available for non-const (writable) views.
+         * @details Enabled only for writable views (i.e., when BufferType is non-const).
+         * Uses the buffer's bounds-checked access internally.
+         * @param frameIndex Frame index in [0, size()).
+         * @return Reference to the writable sample in this channel at the given frame.
+         * @throws std::out_of_range if frameIndex is out of bounds.
          */
-        Sample& operator[](unsigned int frameIndex) {
-            return const_cast<Sample&>(
-                static_cast<const ChannelView&>(*this)[frameIndex]
-            );
+        template <typename T = BufferType, typename = std::enable_if_t<!std::is_const_v<T>>>
+        Sample& operator[](size_t frameIndex) {
+            return const_cast<Sample&>(static_cast<const ChannelView&>(*this)[frameIndex]);
         }
 
         /**
          * @brief Provides read-only access to a sample by its frame index.
+         * @details Always available. Uses the buffer's bounds-checked access internally.
+         * @param frameIndex Frame index in [0, size()).
+         * @return Const reference to the sample in this channel at the given frame.
+         * @throws std::out_of_range if frameIndex is out of bounds.
          */
-        const Sample& operator[](const unsigned int frameIndex) const {
+        const Sample& operator[](const size_t frameIndex) const {
             return buffer_->at(channelIndex_, frameIndex);
         };
 
         /**
          * @brief Applies a gain factor to every sample in this channel.
-         * @note This method is only available for non-const (writable) views.
+         * @details Enabled only for writable views. Casts @p gainFactor to @c Sample.
+         * Runs in a single pass over the channel frames.
+         * @param gainFactor Linear gain multiplier (double, cast to Sample).
          */
         void applyGain(const double gainFactor) {
             if constexpr (!std::is_const_v<BufferType>) {
@@ -54,7 +63,9 @@ namespace pipsqueak::core {
 
         /**
          * @brief Fills every sample in this channel with a specific value.
-         * @note This method is only available for non-const (writable) views.
+         * @details Enabled only for writable views. Casts @p value to @c Sample.
+         * Runs in a single pass over the channel frames.
+         * @param value The fill value (double, cast to Sample).
          */
         void fill(const double value) {
             if constexpr (std::is_const_v<BufferType> == false) {
@@ -67,17 +78,72 @@ namespace pipsqueak::core {
 
         /**
          * @brief Returns the number of frames (samples) in this channel view.
+         * @return Frame count for this channel (equals the parent buffer's numFrames()).
          */
         [[nodiscard]] size_t size() const {
             return buffer_->numFrames();
         };
 
         /**
+         * @brief Strided, zero-overhead view of a single channel.
+         * @tparam Const When true, exposes a @c const Sample*; otherwise @c Sample*.
+         *
+         * @details Represents a channel over interleaved storage using
+         *          (ptr, frames, stride). The element at frame @c i is
+         *          @c ptr[i * stride]. This is an unchecked fast path intended
+         *          for DSP hot loops.
+         */
+        template <bool Const>
+        struct RawSpan {
+            /// Pointer to the first sample of this channel (channel offset already applied).
+            using Ptr  = std::conditional_t<Const, const Sample*, Sample*>;
+            /// Reference type for element access via at().
+            using Ref  = std::conditional_t<Const, const Sample&, Sample&>;
+
+            Ptr   ptr;      ///< Base pointer to channel data.
+            size_t frames;  ///< Number of frames available.
+            size_t stride;  ///< Interleave stride (== parent buffer's numChannels()).
+
+            /**
+             * @brief Unchecked element access by frame index.
+             * @param i Frame index in [0, frames).
+             * @return Reference to element @c ptr[i * stride].
+             * @warning No bounds checks are performed.
+             */
+            Ref at(size_t i) const noexcept { return *(ptr + i * stride); }
+        };
+
+        /**
+         * @brief Returns a writable raw span for fast DSP on this channel.
+         * @details Enabled only for writable views (BufferType non-const).
+         * The returned span uses unchecked pointer + stride access.
+         * @return RawSpan<false> with @c Sample* pointer.
+         */
+        template <typename T = BufferType, typename = std::enable_if_t<!std::is_const_v<T>>>
+        auto raw() noexcept -> RawSpan<false> {
+            return { buffer_->dataPtr() + channelIndex_,
+                     buffer_->numFrames(),
+                     static_cast<size_t>(buffer_->interleaveStride()) };
+        }
+
+        /**
+         * @brief Returns a read-only raw span for fast DSP on this channel.
+         * @details Available for all views. The returned span uses unchecked pointer + stride access.
+         * @return RawSpan<true> with @c const Sample* pointer.
+         */
+        [[nodiscard]] auto raw() const noexcept -> RawSpan<true> {
+            return { buffer_->dataPtr() + channelIndex_,
+                     buffer_->numFrames(),
+                     static_cast<size_t>(buffer_->interleaveStride()) };
+        }
+
+        /**
          * @brief Copies samples from a source range into this channel.
-         * @tparam InputIter The type of the iterator for the source data.
-         * @param first An iterator to the beginning of the source data.
-         * @param last An iterator to the end of the source data.
-         * @note This method is only available for non-const (writable) views.
+         * @tparam InputIter Forward/RandomAccess iterator over values convertible to @c Sample.
+         * @param first Iterator to beginning of source range.
+         * @param last  Iterator to end of source range.
+         * @details Enabled only for writable views. Copies up to @c size() elements;
+         *          extra source elements are ignored.
          */
         template <typename InputIter>
         void copyFrom(InputIter first, InputIter last) {

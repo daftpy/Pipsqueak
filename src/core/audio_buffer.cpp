@@ -48,6 +48,16 @@ namespace pipsqueak::core {
         return const_cast<Sample&>(static_cast<const AudioBuffer&>(*this).at(channelNum, frameNum));
     }
 
+    const Sample& AudioBuffer::at_unchecked(const unsigned int channelNum, const unsigned int frameNum) const noexcept {
+        const size_t idx = static_cast<size_t>(frameNum) * numChannels_ + channelNum;
+        return data_[idx];
+    }
+
+    Sample& AudioBuffer::at_unchecked(const unsigned int channelNum, const unsigned int frameNum) noexcept {
+        const size_t idx = static_cast<size_t>(frameNum) * numChannels_ + channelNum;
+        return data_[idx];
+    }
+
     // Factory method to create a view for the specified channel.
     WritableChannelView AudioBuffer::channel(const unsigned int channelNum) {
         if (channelNum >= numChannels_) {
@@ -64,17 +74,27 @@ namespace pipsqueak::core {
         return ReadOnlyChannelView{this, channelNum};
     }
 
+    Sample* AudioBuffer::dataPtr() noexcept {
+        return data_.data();
+    }
+
+    const Sample* AudioBuffer::dataPtr() const noexcept {
+        return data_.data();
+    }
+
+    unsigned int AudioBuffer::interleaveStride() const noexcept {
+        return numChannels_;
+    }
+
     // Applies the gain factor to all channels in the buffer.
     void AudioBuffer::applyGain(const double gainFactor) {
-        for (unsigned int i{0}; i < numChannels_; ++i) {
-            channel(i).applyGain(gainFactor);
-        }
+        const auto g = static_cast<Sample>(gainFactor);
+        for (auto& s : data_) s *= g;
     }
 
     // Sets all samples in the buffer to a given value.
     void AudioBuffer::fill(const double value) {
-        for (unsigned int i{0}; i < numChannels_; ++i) {
-            channel(i).fill(value);
-        }
+        const auto v = static_cast<Sample>(value);
+        std::fill(data_.begin(), data_.end(), v);
     }
 }

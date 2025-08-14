@@ -1,212 +1,126 @@
-//
 // Created by Daftpy on 7/23/2025.
-//
 #include <gtest/gtest.h>
-#include <numeric>
+#include <algorithm>
+#include <vector>
+
 #include <pipsqueak/core/audio_buffer.hpp>
 #include <pipsqueak/core/channel_view.hpp>
 
+using pipsqueak::core::AudioBuffer;
+using pipsqueak::core::Sample;
+
+static_assert(sizeof(Sample) == 4, "Sample must be 32-bit float");
+
 /// Tests that an audio buffer is initialized with the correct state
 TEST(AudioBufferTest, ConstructorInitializesStateCorrectly) {
-    // ARRANGE: Define the dimensions
     constexpr unsigned int numChannels{2};
     constexpr unsigned int numFrames{512};
 
-    // ACT: Create the buffer
-    const pipsqueak::core::AudioBuffer buffer(numChannels, numFrames);
+    const AudioBuffer buffer(numChannels, numFrames);
 
-    // ASSERT: Verify the state
     EXPECT_EQ(buffer.numChannels(), numChannels);
     EXPECT_EQ(buffer.numFrames(), numFrames);
-    EXPECT_EQ(buffer.data().size(), numChannels * numFrames);
+    EXPECT_EQ(buffer.data().size(), static_cast<size_t>(numChannels) * numFrames);
 }
 
 /// Tests that a specific sample can be accessed inside the audio buffer
 TEST(AudioBufferTest, AtMethodProvidesCorrectAccess) {
-    // ARRANGE: Create the buffer
     constexpr unsigned int numChannels{2};
     constexpr unsigned int numFrames{10};
-    pipsqueak::core::AudioBuffer buffer(numChannels, numFrames);
+    AudioBuffer buffer(numChannels, numFrames);
 
-    // Calculate the index to set a sample for the test.
-    // Index for (channel 1, frame 4) in an interleaved buffer
-    // is (frame * number of channels) + channel.
     constexpr unsigned int testChannel{1};
     constexpr unsigned int testFrame{4};
     constexpr unsigned int testIndex{(testFrame * numChannels) + testChannel};
-    constexpr double expectedValue{0.99};
+    constexpr Sample expectedValue{0.99f};
 
-    // Use the writable data() method to set up the test value
     buffer.data()[testIndex] = expectedValue;
-
-    // ACT & ASSERT: The at(channel, frame) method should return the
-    // value that was just set.
     EXPECT_FLOAT_EQ(buffer.at(testChannel, testFrame), expectedValue);
 }
 
-/// Tests that the at() method throws an exceptin for invalid channel index
+/// Tests that the at() method throws an exception for invalid channel index
 TEST(AudioBufferTest, AtMethodThrowsOnInvalidChannel) {
-    // ARRANGE: Set up the buffer
-    pipsqueak::core::AudioBuffer buffer(2, 10);
-
-    // ACT & ASSERT: Verify that both versions throw on out_of_range
+    AudioBuffer buffer(2, 10);
     ASSERT_THROW(buffer.at(2, 5), std::out_of_range);
     ASSERT_THROW(buffer.at(2, 5), std::out_of_range);
 }
 
-/// Tests that applyGain() on the AudioBuffer affects all channels.
+/// Tests that applyGain() affects all channels (single-pass implementation)
 TEST(AudioBufferTest, BufferApplyGainModifiesAllChannels) {
-    // ARRANGE: Create a buffer and fill its channels with a known value.
-    pipsqueak::core::AudioBuffer buffer(2, 10);
-    std::fill(buffer.data().begin(), buffer.data().end(), 0.5);
+    AudioBuffer buffer(2, 10);
+    std::fill(buffer.data().begin(), buffer.data().end(), 0.5f);
 
-    constexpr pipsqueak::core::Sample gainFactor{2.0};
-    constexpr pipsqueak::core::Sample expectedValue{1.0};
+    constexpr Sample gainFactor{2.0f};
+    constexpr Sample expectedValue{1.0f};
 
-    // ACT: Apply gain to the entire buffer.
     buffer.applyGain(gainFactor);
 
-    // ASSERT: Check that all samples in all channels were modified.
-    for (size_t i{0}; i < buffer.data().size(); ++i) {
-        EXPECT_FLOAT_EQ(buffer.data()[i], expectedValue);
+    for (const auto v : buffer.data()) {
+        EXPECT_FLOAT_EQ(v, expectedValue);
     }
 }
 
-/// Tests that copyFrom() correctly copies interleaved data into the buffer.
+/// Tests that fill() affects all channels (single-pass implementation)
+TEST(AudioBufferTest, BufferFillModifiesAllChannels) {
+    AudioBuffer buffer(2, 10);
+    std::fill(buffer.data().begin(), buffer.data().end(), 0.0f);
+
+    constexpr Sample fillValue{0.99f};
+    buffer.fill(fillValue);
+
+    for (const auto v : buffer.data()) {
+        EXPECT_FLOAT_EQ(v, fillValue);
+    }
+}
+
+/// Tests that copyFrom() correctly copies interleaved data into the buffer
 TEST(AudioBufferTest, BufferCopyFromCopiesCorrectly) {
-    // ARRANGE: Create a destination buffer and a source vector.
-    pipsqueak::core::AudioBuffer buffer(2, 3);
-    const std::vector<pipsqueak::core::Sample> sourceData{0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
+    AudioBuffer buffer(2, 3);
+    const std::vector<Sample> sourceData{0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f};
 
-    // ACT: Copy the source data into the buffer.
     buffer.copyFrom(sourceData.begin(), sourceData.end());
-
-    // ASSERT: The buffer's data should match the source data.
     EXPECT_EQ(buffer.data(), sourceData);
 }
 
-/// Test that copyFrom() truncates copied data if it overflows the buffer.
+/// Test that copyFrom() truncates copied data if it overflows the buffer
 TEST(AudioBufferTest, BufferCopyFromTruncatesOverflowData) {
-    // ARRANGE: Create a destination buffer and a source vector.
-    pipsqueak::core::AudioBuffer buffer(2, 3);
-    const std::vector<pipsqueak::core::Sample> sourceData{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7};
+    AudioBuffer buffer(2, 3);
+    const std::vector<Sample> sourceData{0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f};
     const size_t originalSize{buffer.data().size()};
 
-    // ACT: Copy the source data into the buffer.
     buffer.copyFrom(sourceData.begin(), sourceData.end());
-
-    // ASSERT: The buffer's data size remains the same.
     EXPECT_EQ(originalSize, buffer.data().size());
 }
 
-/// Tests that fill() on the AudioBuffer affects all channels.
-TEST(AudioBufferTest, BufferFillModifiesAllChannels) {
-    // ARRANGE: Create a buffer and fill its channels with 0.0
-    pipsqueak::core::AudioBuffer buffer(2, 10);
+/// Unchecked access returns same elements as checked access (for valid indices)
+TEST(AudioBufferTest, UncheckedAccessMatchesChecked) {
+    constexpr unsigned int ch{1};
+    constexpr unsigned int fr{2};
+    AudioBuffer buffer(2, 8);
 
-    // Fill the buffer with empty data
-    std::fill(buffer.data().begin(), buffer.data().end(), 0.0);
+    // Set via checked
+    buffer.at(ch, fr) = 0.33f;
 
-    // Define a fill value
-    constexpr pipsqueak::core::Sample fillValue{0.99};
+    // Read via unchecked
+    EXPECT_FLOAT_EQ(buffer.at_unchecked(ch, fr), 0.33f);
 
-    // ACT: Fill buffer with a new value
-    buffer.fill(fillValue);
-
-    // ASSERT: Check that all samples in the buffer were modified
-    for (size_t i{0}; i < buffer.data().size(); ++i) {
-        EXPECT_FLOAT_EQ(buffer.data()[i], fillValue);
-    }
+    // Write via unchecked and read via checked
+    buffer.at_unchecked(ch, fr) = 0.77f;
+    EXPECT_FLOAT_EQ(buffer.at(ch, fr), 0.77f);
 }
 
-/// Tests a ChannelView provides correct access to the channel data
-TEST(AudioBufferTest, ChannelViewProvidesCorrectAccess) {
-    // ARRANGE: Create a buffer and fill it with data
-    pipsqueak::core::AudioBuffer buffer(2, 3);
-    buffer.data() = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
-    constexpr pipsqueak::core::Sample newValueFame1{0.99};
-
-    // ACT: Get a view of channel 0 and modify a sample through it
-    pipsqueak::core::ChannelView channelView = buffer.channel(0);
-    channelView[1] = newValueFame1;
-
-    // ASSERT: Check that the original buffer was modified
-    EXPECT_FLOAT_EQ(buffer.at(0, 1), newValueFame1);
-
-    // ASSERT: Other channels were not affected
-    EXPECT_FLOAT_EQ(buffer.at(1, 1), 0.3);
-}
-
-/// Tests that applyGain on a ChannelView only affects that channel.
-TEST(AudioBufferTest, ChannelViewApplyGainModifiesCorrectChannel) {
-    // ARRANGE: Create a buffer and fill its channels with different values
+/// dataPtr + stride math lines up with interleaving
+TEST(AudioBufferTest, DataPtrAndStrideAreCorrect) {
     constexpr unsigned int numChannels{2};
-    constexpr unsigned int numFrames{3};
-    pipsqueak::core::AudioBuffer buffer(numChannels, numFrames);
+    constexpr unsigned int numFrames{4};
+    AudioBuffer buffer(numChannels, numFrames);
 
-    // Fill channel 0 with 0.5 and channel 1 with 0.8
-    for (size_t i{0}; i < numFrames; ++i) {
-        buffer.at(0, i) = 0.5;
-        buffer.at(1, i) = 0.8;
-    }
+    Sample* base = buffer.dataPtr();
+    const unsigned int stride = buffer.interleaveStride();
 
-    constexpr pipsqueak::core::Sample gainFactor{2.0};
-    constexpr pipsqueak::core::Sample expectedChannel0Value{1.0};
-    constexpr pipsqueak::core::Sample expectedChannel1Value{0.8};
+    // Write channel 1, frame 3 via pointer/stride
+    base[3 * stride + 1] = 0.5f;
 
-    // ACT: Apply gain to channel 0 ONLY
-    buffer.channel(0).applyGain(gainFactor);
-
-    // ASSERT: Check that all samples in channel 0 were modified correctly
-    for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_FLOAT_EQ(buffer.at(0, i), expectedChannel0Value);
-    }
-
-    // ASSERT: Check that all samples in channel 1 were not modified
-    for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_FLOAT_EQ(buffer.at(1, i), expectedChannel1Value);
-    }
-}
-
-
-TEST(AudioBufferTest, ChannelViewFillModifiesCorrectChannel) {
-    // ARRANGE: Create a buffer
-    constexpr unsigned int numChannels{2};
-    constexpr unsigned int numFrames{10};
-    pipsqueak::core::AudioBuffer buffer(numChannels, numFrames);
-
-    // Define the fill value
-    constexpr pipsqueak::core::Sample fillValue{0.77};
-
-    // ACT: Fill channel 1 only
-    buffer.channel(1).fill(fillValue);
-
-    // ASSERT: Check that channel 1 was filled correctly
-    for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_FLOAT_EQ(buffer.at(1, i), fillValue);
-    }
-
-    // ASSERT: Check that channel 0 was not modified
-    for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_FLOAT_EQ(buffer.at(0, i), 0.0);
-    }
-}
-
-TEST(AudioBufferTest, ChannelViewCopyFromCopiesCorrectly) {
-    // ARRANGE: Create a destination buffer and source buffer.
-    pipsqueak::core::AudioBuffer buffer(2, 4);
-    const std::vector<pipsqueak::core::Sample> sourceData = {0.1, 0.2, 0.3, 0.4};
-
-    // ACT: Copy the data into channel 1 of the buffer.
-    buffer.channel(1).copyFrom(sourceData.begin(), sourceData.end());
-
-    // ASSERT: Check that the data was copied to the correct channel.
-    for (size_t i{0}; i < sourceData.size(); ++i) {
-        EXPECT_FLOAT_EQ(buffer.at(1, i), sourceData[i]);
-    }
-
-    // ASSERT: Check that channel 0 was not modified.
-    for (size_t i{0}; i < sourceData.size(); ++i) {
-        EXPECT_FLOAT_EQ(buffer.at(0, i), 0.0);
-    }
+    EXPECT_FLOAT_EQ(buffer.at(1, 3), 0.5f);
+    EXPECT_EQ(stride, numChannels);
 }

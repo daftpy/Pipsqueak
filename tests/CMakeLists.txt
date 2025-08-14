@@ -22,6 +22,7 @@ add_executable(pipsqueak_test
         integration/engine/engine_tests.cpp
         unit/core/buffer_store_tests.cpp
         unit/dsp/mixer_tests.cpp
+        unit/core/channel_view_tests.cpp
 )
 
 target_link_libraries(pipsqueak_test

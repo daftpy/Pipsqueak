@@ -89,17 +89,47 @@ namespace pipsqueak::core {
         Sample& at(unsigned int channelNum, unsigned int frameNum);
 
         /**
+         * @brief Unchecked element access (no bounds checks).
+         * @param channelNum Channel index in [0, numChannels()).
+         * @param frameNum   Frame index in [0, numFrames()).
+         * @return Reference to the sample.
+         * @warning Caller must ensure indices are valid. Use only in hot paths when already validated.
+         */
+        [[nodiscard]] const Sample& at_unchecked(unsigned int channelNum, unsigned int frameNum) const noexcept;
+        Sample& at_unchecked(unsigned int channelNum, unsigned int frameNum) noexcept;
+
+        /**
+         * @brief Returns a raw pointer to the interleaved sample data.
+         * @return Pointer to @c Sample storage (size = numChannels() * numFrames()).
+         * @note Pointer remains valid for the lifetime of the AudioBuffer object
+         *       and until any operation that may reallocate the underlying vector.
+         */
+        [[nodiscard]] Sample* dataPtr() noexcept;
+        [[nodiscard]] const Sample* dataPtr() const noexcept;
+
+        /**
+         * @brief Returns the interleave stride for the data layout.
+         * @details This equals the number of channels and is the increment (in samples)
+         *          to move from frame @c i to frame @c i+1 for the same channel.
+         * @return Interleave stride (== numChannels()).
+         */
+        [[nodiscard]] unsigned int interleaveStride() const noexcept;
+
+        /**
          * @brief Applies a gain factor to all samples in the buffer.
-         * @param gainFactor The gain multiplier.
+         * @details Single-pass implementation over interleaved storage.
+         *          @p gainFactor is cast to @c Sample before multiplication.
+         * @param gainFactor Linear gain multiplier (double, cast to Sample).
          */
         void applyGain(double gainFactor);
 
         /**
-         * @brief Sets all samples in the buffer to a given fill value.
-         * @param value The fill value.
+         * @brief Sets all samples in the buffer to a given value.
+         * @details Single-pass implementation over interleaved storage.
+         *          @p value is cast to @c Sample before assignment.
+         * @param value Fill value (double, cast to Sample).
          */
         void fill(double value);
-
 
        /**
         * @brief Copies interleaved sample data from a source range into this buffer.
