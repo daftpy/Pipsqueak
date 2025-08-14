@@ -4,6 +4,7 @@
 
 #include "dsp/sample_player.hpp"
 #include "core/logging.hpp"
+#include <pipsqueak/core/channel_view.hpp>
 
 namespace pipsqueak::dsp {
     SamplePlayer::SamplePlayer(std::shared_ptr<const core::AudioBuffer> sampleData)
@@ -26,42 +27,79 @@ namespace pipsqueak::dsp {
     }
 
     void SamplePlayer::process(core::AudioBuffer& buffer) {
-        // If not playing or no sample data, do nothing
-        if (!isPlaying_ || !sampleData_) {
-            return;
+    // If not playing or no sample data, do nothing
+    if (!isPlaying_ || !sampleData_) {
+        return;
+    }
+
+    const unsigned int outCh = buffer.numChannels();
+    const unsigned int srcCh = sampleData_->numChannels();
+
+    // If we've reached the end of the source, stop.
+    const size_t srcFrames = sampleData_->numFrames();
+    if (readPosition_ >= srcFrames) {
+        isPlaying_ = false;
+        return;
+    }
+
+    // Only render what we have left in the source (don’t overrun).
+    const size_t framesToRender =
+        std::min(static_cast<size_t>(buffer.numFrames()), srcFrames - readPosition_);
+
+    if (framesToRender == 0) {
+        // Nothing to render in this callback.
+        return;
+    }
+
+    if (srcCh == 1) {
+        // Mono source: duplicate to all output channels.
+        const auto src = sampleData_->channel(0).raw(); // RawSpan<true>
+
+        // Prepare writable spans for output channels once.
+        std::vector<decltype(buffer.channel(0).raw())> outs;
+        outs.reserve(outCh);
+        for (unsigned int c = 0; c < outCh; ++c) {
+            outs.push_back(buffer.channel(c).raw());     // RawSpan<false>
         }
 
-        const auto numOutputChannels = buffer.numChannels();
-        const auto numSourceChannels = sampleData_->numChannels();
-
-        // Loop through each frame of the output buffer.
-        for (unsigned int f{0}; f < buffer.numFrames(); ++f) {
-            // Check if we're at the end of the sample data
-            if (readPosition_ >= sampleData_->numFrames()) {
-                isPlaying_ = false;
-                break; // Exit the loop
+        const size_t srcStart = readPosition_;
+        for (size_t f = 0; f < framesToRender; ++f) {
+            const core::Sample s = src.at(srcStart + f);
+            for (unsigned int c = 0; c < outCh; ++c) {
+                outs[c].at(f) += s;
             }
+        }
+    } else {
+        // Stereo / multi-channel: copy channel-for-channel.
+        const unsigned int n = std::min(outCh, srcCh);
 
-            // Copy the data for the current frame
-            if (numSourceChannels == 1) {
-                // Mono sources copy the single sample to all output channels
-                const auto sampleValue = sampleData_->at(0, readPosition_);
-                for (unsigned int c{0}; c < numOutputChannels; ++c) {
-                    // Mix the data with the buffer
-                    buffer.at(c, f) += sampleValue;
-                }
-            } else {
-                // Stereo/multi-channel sources copy channel for channel.
-                const auto numChannelsToCopy = std::min(numSourceChannels, numOutputChannels);
-                for (unsigned int c{0}; c < numChannelsToCopy; ++c) {
-                    buffer.at(c, f) += sampleData_->at(c, readPosition_);
-                }
+        std::vector<decltype(sampleData_->channel(0).raw())> srcs;
+        srcs.reserve(n);
+        for (unsigned int c = 0; c < n; ++c) {
+            srcs.push_back(sampleData_->channel(c).raw());  // RawSpan<true>
+        }
+
+        std::vector<decltype(buffer.channel(0).raw())> outs;
+        outs.reserve(n);
+        for (unsigned int c = 0; c < n; ++c) {
+            outs.push_back(buffer.channel(c).raw());        // RawSpan<false>
+        }
+
+        const size_t srcStart = readPosition_;
+        for (size_t f = 0; f < framesToRender; ++f) {
+            for (unsigned int c = 0; c < n; ++c) {
+                outs[c].at(f) += srcs[c].at(srcStart + f);
             }
-
-            // Advanced the read position
-            readPosition_++;
         }
     }
+
+    // Advance read position and update state.
+    readPosition_ += framesToRender;
+    if (readPosition_ >= srcFrames) {
+        isPlaying_ = false;
+    }
+}
+
 
     void SamplePlayer::setPosition(const size_t newPosition) {
         readPosition_ = newPosition;
