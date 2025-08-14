@@ -27,6 +27,10 @@ namespace pipsqueak::engine {
     }
 
     AudioEngine::~AudioEngine() {
+        if (isRunning()) {
+            stopStream();
+        }
+
         core::logging::Logger::log("pipsqueak", "AudioEngine destroyed!");
     }
 
