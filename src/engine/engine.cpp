@@ -3,6 +3,7 @@
 //
 #include "pipsqueak/engine/engine.hpp"
 #include "pipsqueak/core/logging.hpp"
+#include <cstring>
 
 namespace pipsqueak::engine {
     int AudioEngine::audioCallback(void *outputBuffer, void * /*inputBuffer*/,
@@ -39,10 +40,13 @@ namespace pipsqueak::engine {
         // 3. TODO: process a master effect chain
 
         // 4. Copy the final mixed audio to the hardware output buffer.
-        auto* hardwareBuffer = static_cast<double*>(outputBuffer);
+        auto* hardwareBuffer = static_cast<core::Sample*>(outputBuffer);
 
-        const size_t samplesToCopy = static_cast<size_t>(numFrames) * mixerBuffer_->numChannels();
-        std::copy_n(mixerBuffer_->data().begin(), samplesToCopy, hardwareBuffer);
+        std::memcpy(
+            hardwareBuffer,
+            mixerBuffer_->data().data(),
+            static_cast<size_t>(numFrames) * mixerBuffer_->numChannels() * sizeof(core::Sample)
+        );
 
         return 0;
     }
@@ -62,7 +66,7 @@ namespace pipsqueak::engine {
 
         // Try to open the stream
         if (const auto err = audio_->openStream(
-            &outputParams, nullptr, RTAUDIO_FLOAT64,
+            &outputParams, nullptr, RTAUDIO_FLOAT32,
             sampleRate, &negotiatedBufferSize, &AudioEngine::audioCallback, this
         ); err != RTAUDIO_NO_ERROR) {
             std::cerr << "AudioEngine failed to open stream: " << audio_->getErrorText() << "\n";

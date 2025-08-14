@@ -7,8 +7,8 @@
 namespace pipsqueak::core {
 
     AudioBuffer::AudioBuffer(const unsigned int numChannels, const unsigned int numFrames)
-        : numChannels_(numChannels), numFrames_(numFrames), data_(numChannels * numFrames) {
-        const std::string message = "AudioBuffer initalized! Channels: " + std::to_string(numChannels) + ", Frames: "
+        : numChannels_(numChannels), numFrames_(numFrames), data_(static_cast<size_t>(numChannels) * static_cast<size_t>(numFrames)) {
+        const std::string message = "AudioBuffer initialized! Channels: " + std::to_string(numChannels) + ", Frames: "
             + std::to_string(numFrames);
         logging::Logger::log("pipsqueak", message);
     }
@@ -30,7 +30,7 @@ namespace pipsqueak::core {
     }
 
     // This is the primary implementation of the at() method, with bounds checking.
-    const double& AudioBuffer::at(const unsigned int channelNum, const unsigned int frameNum) const {
+    const Sample& AudioBuffer::at(const unsigned int channelNum, const unsigned int frameNum) const {
         if (channelNum >= numChannels_ || frameNum >= numFrames_) {
             throw std::out_of_range(
                 "AudioBuffer access out of range."
@@ -38,14 +38,14 @@ namespace pipsqueak::core {
                 "but size is [ch:" + std::to_string(numChannels_) + ", fr:" + std::to_string(numFrames_) + "]."
             );
         }
-        return data_[(frameNum * numChannels_) + channelNum];
+        // Get the index as size_t
+        const size_t idx = static_cast<size_t>(frameNum) * numChannels_ + channelNum;
+        return data_[idx];
     }
 
     // Reuses the const version's logic to avoid code duplication.
-    double& AudioBuffer::at(const unsigned int channelNum, const unsigned int frameNum) {
-        return const_cast<double&>(
-            static_cast<const AudioBuffer&>(*this).at(channelNum, frameNum)
-        );
+    Sample& AudioBuffer::at(const unsigned int channelNum, const unsigned int frameNum) {
+        return const_cast<Sample&>(static_cast<const AudioBuffer&>(*this).at(channelNum, frameNum));
     }
 
     // Factory method to create a view for the specified channel.

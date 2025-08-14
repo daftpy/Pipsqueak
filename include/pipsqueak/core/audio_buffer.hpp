@@ -40,16 +40,16 @@ namespace pipsqueak::core {
         AudioBuffer(const unsigned int numChannels, const unsigned int numFrames, const SampleType* initialData)
             : numChannels_(numChannels),
               numFrames_(numFrames),
-              data_(numChannels * numFrames) // Pre-allocate the vector
+              data_(static_cast<size_t>(numChannels) * static_cast<size_t>(numFrames)) // Pre-allocate the vector
         {
             if (!initialData) {
                 // throw std::invalid_argument("initialData cannot be null.");
                 logging::Logger::log("pipsqueak", "Cannot create an AudioBuffer with no initial data");
             } else {
                 // Loop through the source data, convert, and copy it into our internal buffer.
-                const size_t totalSamples = static_cast<size_t>(numChannels_) * numFrames_;
+                const size_t totalSamples = static_cast<size_t>(numChannels_) * static_cast<size_t>(numFrames_);
                 for (size_t i = 0; i < totalSamples; ++i) {
-                 data_[i] = static_cast<double>(initialData[i]);
+                 data_[i] = static_cast<Sample>(initialData[i]);
                 }
             }
         }
@@ -85,8 +85,8 @@ namespace pipsqueak::core {
          * @return A reference to the sample.
          * @throws std::out_of_range if access is out of bounds.
          */
-        [[nodiscard]] const double& at(unsigned int channelNum, unsigned int frameNum) const;
-        double& at(unsigned int channelNum, unsigned int frameNum);
+        [[nodiscard]] const Sample& at(unsigned int channelNum, unsigned int frameNum) const;
+        Sample& at(unsigned int channelNum, unsigned int frameNum);
 
         /**
          * @brief Applies a gain factor to all samples in the buffer.

@@ -2,6 +2,9 @@
 #define CHANNEL_VIEW_HPP
 
 #include "audio_buffer.hpp"
+#include <algorithm>
+#include <type_traits>
+#include <iterator>
 
 namespace pipsqueak::core {
 
@@ -23,8 +26,8 @@ namespace pipsqueak::core {
          * @brief Provides read-write access to a sample by its frame index.
          * @note This method is only available for non-const (writable) views.
          */
-        double& operator[](unsigned int frameIndex) {
-            return const_cast<double&>(
+        Sample& operator[](unsigned int frameIndex) {
+            return const_cast<Sample&>(
                 static_cast<const ChannelView&>(*this)[frameIndex]
             );
         }
@@ -32,7 +35,7 @@ namespace pipsqueak::core {
         /**
          * @brief Provides read-only access to a sample by its frame index.
          */
-        const double& operator[](const unsigned int frameIndex) const {
+        const Sample& operator[](const unsigned int frameIndex) const {
             return buffer_->at(channelIndex_, frameIndex);
         };
 
@@ -40,10 +43,11 @@ namespace pipsqueak::core {
          * @brief Applies a gain factor to every sample in this channel.
          * @note This method is only available for non-const (writable) views.
          */
-        void applyGain(double gainFactor) {
-            if constexpr (std::is_const_v<std::remove_pointer_t<BufferType>> == false) {
+        void applyGain(const double gainFactor) {
+            if constexpr (!std::is_const_v<BufferType>) {
+                const auto g = static_cast<Sample>(gainFactor);
                 for (size_t i = 0; i < size(); ++i) {
-                    (*this)[i] *= gainFactor;
+                    (*this)[i] *= g;
                 }
             }
         };
@@ -52,10 +56,11 @@ namespace pipsqueak::core {
          * @brief Fills every sample in this channel with a specific value.
          * @note This method is only available for non-const (writable) views.
          */
-        void fill(double value) {
-            if constexpr (std::is_const_v<std::remove_pointer_t<BufferType>> == false) {
+        void fill(const double value) {
+            if constexpr (std::is_const_v<BufferType> == false) {
+                const auto v = static_cast<Sample>(value);
                 for (size_t i = 0; i < size(); ++i) {
-                    (*this)[i] = value;
+                    (*this)[i] = v;
                 }
             }
         };
@@ -77,7 +82,7 @@ namespace pipsqueak::core {
         template <typename InputIter>
         void copyFrom(InputIter first, InputIter last) {
             // This method should only work on a writable view.
-            if constexpr (!std::is_const_v<std::remove_pointer_t<BufferType>>) {
+            if constexpr (!std::is_const_v<BufferType>) {
                 const auto numToCopy = std::min(
                     static_cast<size_t>(std::distance(first, last)),
                     size()

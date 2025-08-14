@@ -7,8 +7,10 @@
 #include <vector>
 
 namespace pipsqueak::core {
-    // The PCM data buffer data is represented as a vector of doubles.
-    using PCMData = std::vector<double>;
+    using Sample = float;
+
+    // The PCM data buffer data is represented as a vector of interleaved 32-bit floats.
+    using PCMData = std::vector<Sample>;
 }
 
 #endif //CORE_TYPES_HPP

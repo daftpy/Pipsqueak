@@ -41,7 +41,7 @@ TEST(AudioBufferTest, AtMethodProvidesCorrectAccess) {
 
     // ACT & ASSERT: The at(channel, frame) method should return the
     // value that was just set.
-    EXPECT_DOUBLE_EQ(buffer.at(testChannel, testFrame), expectedValue);
+    EXPECT_FLOAT_EQ(buffer.at(testChannel, testFrame), expectedValue);
 }
 
 /// Tests that the at() method throws an exceptin for invalid channel index
@@ -60,15 +60,15 @@ TEST(AudioBufferTest, BufferApplyGainModifiesAllChannels) {
     pipsqueak::core::AudioBuffer buffer(2, 10);
     std::fill(buffer.data().begin(), buffer.data().end(), 0.5);
 
-    constexpr double gainFactor{2.0};
-    constexpr double expectedValue{1.0};
+    constexpr pipsqueak::core::Sample gainFactor{2.0};
+    constexpr pipsqueak::core::Sample expectedValue{1.0};
 
     // ACT: Apply gain to the entire buffer.
     buffer.applyGain(gainFactor);
 
     // ASSERT: Check that all samples in all channels were modified.
     for (size_t i{0}; i < buffer.data().size(); ++i) {
-        EXPECT_DOUBLE_EQ(buffer.data()[i], expectedValue);
+        EXPECT_FLOAT_EQ(buffer.data()[i], expectedValue);
     }
 }
 
@@ -76,7 +76,7 @@ TEST(AudioBufferTest, BufferApplyGainModifiesAllChannels) {
 TEST(AudioBufferTest, BufferCopyFromCopiesCorrectly) {
     // ARRANGE: Create a destination buffer and a source vector.
     pipsqueak::core::AudioBuffer buffer(2, 3);
-    const std::vector<double> sourceData{0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
+    const std::vector<pipsqueak::core::Sample> sourceData{0.1, 0.2, 0.3, 0.4, 0.5, 0.6};
 
     // ACT: Copy the source data into the buffer.
     buffer.copyFrom(sourceData.begin(), sourceData.end());
@@ -89,7 +89,7 @@ TEST(AudioBufferTest, BufferCopyFromCopiesCorrectly) {
 TEST(AudioBufferTest, BufferCopyFromTruncatesOverflowData) {
     // ARRANGE: Create a destination buffer and a source vector.
     pipsqueak::core::AudioBuffer buffer(2, 3);
-    const std::vector<double> sourceData{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7};
+    const std::vector<pipsqueak::core::Sample> sourceData{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7};
     const size_t originalSize{buffer.data().size()};
 
     // ACT: Copy the source data into the buffer.
@@ -108,14 +108,14 @@ TEST(AudioBufferTest, BufferFillModifiesAllChannels) {
     std::fill(buffer.data().begin(), buffer.data().end(), 0.0);
 
     // Define a fill value
-    constexpr double fillValue{0.99};
+    constexpr pipsqueak::core::Sample fillValue{0.99};
 
     // ACT: Fill buffer with a new value
     buffer.fill(fillValue);
 
     // ASSERT: Check that all samples in the buffer were modified
     for (size_t i{0}; i < buffer.data().size(); ++i) {
-        EXPECT_DOUBLE_EQ(buffer.data()[i], fillValue);
+        EXPECT_FLOAT_EQ(buffer.data()[i], fillValue);
     }
 }
 
@@ -124,17 +124,17 @@ TEST(AudioBufferTest, ChannelViewProvidesCorrectAccess) {
     // ARRANGE: Create a buffer and fill it with data
     pipsqueak::core::AudioBuffer buffer(2, 3);
     buffer.data() = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5};
-    constexpr double newValueFame1{0.99};
+    constexpr pipsqueak::core::Sample newValueFame1{0.99};
 
     // ACT: Get a view of channel 0 and modify a sample through it
     pipsqueak::core::ChannelView channelView = buffer.channel(0);
     channelView[1] = newValueFame1;
 
     // ASSERT: Check that the original buffer was modified
-    EXPECT_DOUBLE_EQ(buffer.at(0, 1), newValueFame1);
+    EXPECT_FLOAT_EQ(buffer.at(0, 1), newValueFame1);
 
     // ASSERT: Other channels were not affected
-    EXPECT_DOUBLE_EQ(buffer.at(1, 1), 0.3);
+    EXPECT_FLOAT_EQ(buffer.at(1, 1), 0.3);
 }
 
 /// Tests that applyGain on a ChannelView only affects that channel.
@@ -150,21 +150,21 @@ TEST(AudioBufferTest, ChannelViewApplyGainModifiesCorrectChannel) {
         buffer.at(1, i) = 0.8;
     }
 
-    constexpr double gainFactor{2.0};
-    constexpr double expectedChannel0Value{1.0};
-    constexpr double expectedChannel1Value{0.8};
+    constexpr pipsqueak::core::Sample gainFactor{2.0};
+    constexpr pipsqueak::core::Sample expectedChannel0Value{1.0};
+    constexpr pipsqueak::core::Sample expectedChannel1Value{0.8};
 
     // ACT: Apply gain to channel 0 ONLY
     buffer.channel(0).applyGain(gainFactor);
 
     // ASSERT: Check that all samples in channel 0 were modified correctly
     for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_DOUBLE_EQ(buffer.at(0, i), expectedChannel0Value);
+        EXPECT_FLOAT_EQ(buffer.at(0, i), expectedChannel0Value);
     }
 
     // ASSERT: Check that all samples in channel 1 were not modified
     for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_DOUBLE_EQ(buffer.at(1, i), expectedChannel1Value);
+        EXPECT_FLOAT_EQ(buffer.at(1, i), expectedChannel1Value);
     }
 }
 
@@ -176,37 +176,37 @@ TEST(AudioBufferTest, ChannelViewFillModifiesCorrectChannel) {
     pipsqueak::core::AudioBuffer buffer(numChannels, numFrames);
 
     // Define the fill value
-    constexpr double fillValue{0.77};
+    constexpr pipsqueak::core::Sample fillValue{0.77};
 
     // ACT: Fill channel 1 only
     buffer.channel(1).fill(fillValue);
 
     // ASSERT: Check that channel 1 was filled correctly
     for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_DOUBLE_EQ(buffer.at(1, i), fillValue);
+        EXPECT_FLOAT_EQ(buffer.at(1, i), fillValue);
     }
 
     // ASSERT: Check that channel 0 was not modified
     for (size_t i{0}; i < numFrames; ++i) {
-        EXPECT_DOUBLE_EQ(buffer.at(0, i), 0.0);
+        EXPECT_FLOAT_EQ(buffer.at(0, i), 0.0);
     }
 }
 
 TEST(AudioBufferTest, ChannelViewCopyFromCopiesCorrectly) {
     // ARRANGE: Create a destination buffer and source buffer.
     pipsqueak::core::AudioBuffer buffer(2, 4);
-    const std::vector<double> sourceData = {0.1, 0.2, 0.3, 0.4};
+    const std::vector<pipsqueak::core::Sample> sourceData = {0.1, 0.2, 0.3, 0.4};
 
     // ACT: Copy the data into channel 1 of the buffer.
     buffer.channel(1).copyFrom(sourceData.begin(), sourceData.end());
 
     // ASSERT: Check that the data was copied to the correct channel.
     for (size_t i{0}; i < sourceData.size(); ++i) {
-        EXPECT_DOUBLE_EQ(buffer.at(1, i), sourceData[i]);
+        EXPECT_FLOAT_EQ(buffer.at(1, i), sourceData[i]);
     }
 
     // ASSERT: Check that channel 0 was not modified.
     for (size_t i{0}; i < sourceData.size(); ++i) {
-        EXPECT_DOUBLE_EQ(buffer.at(0, i), 0.0);
+        EXPECT_FLOAT_EQ(buffer.at(0, i), 0.0);
     }
 }

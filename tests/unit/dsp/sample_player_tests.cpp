@@ -31,7 +31,7 @@ TEST(SamplePlayerTest, InactivePlayerDoesNotModifyBuffer) {
     pipsqueak::core::AudioBuffer outputBuffer(2, 256);
     outputBuffer.fill(0.5); // Fill with a non-zero value.
 
-    const std::vector<double> originalData = outputBuffer.data();
+    const std::vector<float> originalData = outputBuffer.data();
 
     // ACT: Process audio with the inactive player.
     player.process(outputBuffer);
@@ -95,8 +95,8 @@ TEST(SamplePlayerTest, ProcessCopiesMonoSourceToStereoOutput) {
 
     // ASSERT: Check that the mono source was copied to both stereo channels.
     for (size_t f{0}; f < outputBuffer.numFrames(); ++f) {
-        EXPECT_DOUBLE_EQ(outputBuffer.at(0, f), 0.77); // Left channel
-        EXPECT_DOUBLE_EQ(outputBuffer.at(1, f), 0.77); // Right channel
+        EXPECT_FLOAT_EQ(outputBuffer.at(0, f), 0.77); // Left channel
+        EXPECT_FLOAT_EQ(outputBuffer.at(1, f), 0.77); // Right channel
     }
 }
 
@@ -116,7 +116,7 @@ TEST(SamplePlayerTest, ProcessCopiesStereoSourceToStereoOutput) {
 
     // ASSERT: Check that each channel was copied correctly.
     for (size_t f = 0; f < outputBuffer.numFrames(); ++f) {
-        EXPECT_DOUBLE_EQ(outputBuffer.at(0, f), 0.5);  // Left should be 0.5
-        EXPECT_DOUBLE_EQ(outputBuffer.at(1, f), -0.5); // Right should be -0.5
+        EXPECT_FLOAT_EQ(outputBuffer.at(0, f), 0.5);  // Left should be 0.5
+        EXPECT_FLOAT_EQ(outputBuffer.at(1, f), -0.5); // Right should be -0.5
     }
 }
