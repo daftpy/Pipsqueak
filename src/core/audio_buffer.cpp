@@ -8,9 +8,9 @@ namespace pipsqueak::core {
 
     AudioBuffer::AudioBuffer(const unsigned int numChannels, const unsigned int numFrames)
         : numChannels_(numChannels), numFrames_(numFrames), data_(static_cast<size_t>(numChannels) * static_cast<size_t>(numFrames)) {
-        const std::string message = "AudioBuffer initialized! Channels: " + std::to_string(numChannels) + ", Frames: "
-            + std::to_string(numFrames);
-        logging::Logger::log("pipsqueak", message);
+        // const std::string message = "AudioBuffer initialized! Channels: " + std::to_string(numChannels) + ", Frames: "
+        //     + std::to_string(numFrames);
+        // logging::Logger::log("pipsqueak", message);
     }
 
     unsigned int AudioBuffer::numChannels() const {

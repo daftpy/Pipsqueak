@@ -1,112 +1,117 @@
-//
 // Created by Daftpy on 8/8/2025.
-//
 #include <gtest/gtest.h>
 #include <pipsqueak/dsp/mixer.hpp>
-#include <pipsqueak/dsp/sample_player.hpp>
+#include <pipsqueak/dsp/sampler.hpp>
 #include <pipsqueak/core/audio_buffer.hpp>
+#include <atomic>
+#include <thread>
 
-// Test that the mixer correctly sums the output of multiple sources.
-TEST(MixerTest, SumsSourcesCorrectly) {
-    // ARRANGE: Create the mixer and declare the number of frames
-    pipsqueak::dsp::Mixer mixer;
+// Helper: make a mono buffer filled with a value
+static std::shared_ptr<pipsqueak::core::AudioBuffer>
+makeMonoFilled(unsigned frames, double value) {
+    auto buf = std::make_shared<pipsqueak::core::AudioBuffer>(1, frames);
+    buf->fill(value);
+    return buf;
+}
+
+// Test that the mixer correctly sums the output of multiple samplers.
+TEST(MixerTest, SumsSamplersCorrectly) {
+    using namespace pipsqueak;
+
+    dsp::Mixer mixer;
     constexpr unsigned int numFrames = 16;
 
-    // Create a source buffer filled with a constant value of 0.2
-    auto sourceBuffer1 = std::make_shared<pipsqueak::core::AudioBuffer>(1, numFrames);
-    sourceBuffer1->fill(0.2);
-    auto player1 = std::make_shared<pipsqueak::dsp::SamplePlayer>(sourceBuffer1);
-    player1->play();
+    // Two sources with constant values
+    auto src1 = makeMonoFilled(numFrames, 0.2);
+    auto src2 = makeMonoFilled(numFrames, 0.3);
 
-    // Create a second source buffer filled with a constant value of 0.3
-    auto sourceBuffer2 = std::make_shared<pipsqueak::core::AudioBuffer>(1, numFrames);
-    sourceBuffer2->fill(0.3);
-    auto player2 = std::make_shared<pipsqueak::dsp::SamplePlayer>(sourceBuffer2);
-    player2->play();
+    auto s1 = std::make_shared<dsp::Sampler>(src1);
+    auto s2 = std::make_shared<dsp::Sampler>(src2);
 
-    // Add both players to the mixer
-    mixer.addSource(player1);
-    mixer.addSource(player2);
+    // Keep rates equal to avoid resampling effects for this test
+    s1->setNativeRate(48000.0);
+    s1->setEngineRate(48000.0);
+    s2->setNativeRate(48000.0);
+    s2->setEngineRate(48000.0);
 
-    // Create an empty output buffer to process into
-    pipsqueak::core::AudioBuffer outputBuffer(1, numFrames);
-    outputBuffer.fill(0.0);
+    // Trigger both voices at root note with full velocity
+    s1->noteOn(48, 1.0f);
+    s2->noteOn(48, 1.0f);
 
-    // ACT: Process one block of audio
-    mixer.process(outputBuffer);
+    mixer.addSource(s1);
+    mixer.addSource(s2);
 
-    // ASSERT: The output buffer should contain the sum of the two sources (0.2 + 0.3 = 0.5)
-    for (unsigned int i = 0; i < numFrames; ++i) {
-        EXPECT_NEAR(outputBuffer.at(0, i), 0.5, 1e-9);
+    core::AudioBuffer out(1, numFrames);
+    out.fill(0.0);
+
+    mixer.process(out);
+
+    // Expect 0.2 + 0.3 = 0.5 per frame
+    for (unsigned i = 0; i < numFrames; ++i) {
+        EXPECT_NEAR(out.at(0, i), 0.5, 1e-9);
     }
 }
 
 // Test that after clearing the sources, the mixer produces silence.
 TEST(MixerTest, ClearSourcesResultsInSilence) {
-    // ARRANGE: Create the mixer and declare the number of frames
-    pipsqueak::dsp::Mixer mixer;
+    using namespace pipsqueak;
+
+    dsp::Mixer mixer;
     constexpr unsigned int numFrames = 16;
 
-    // Add a source to the mixer
-    auto sourceBuffer = std::make_shared<pipsqueak::core::AudioBuffer>(1, numFrames);
-    sourceBuffer->fill(0.5);
-    auto player = std::make_shared<pipsqueak::dsp::SamplePlayer>(sourceBuffer);
-    player->play();
-    mixer.addSource(player);
+    auto src = makeMonoFilled(numFrames, 0.5);
+    auto sampler = std::make_shared<dsp::Sampler>(src);
+    sampler->setNativeRate(48000.0);
+    sampler->setEngineRate(48000.0);
+    sampler->noteOn(48, 1.0f);
 
-    // Create an empty output buffer
-    pipsqueak::core::AudioBuffer outputBuffer(1, numFrames);
-    outputBuffer.fill(0.0);
+    mixer.addSource(sampler);
 
-    // ACT: Clear all sources and then process one block of audio
+    core::AudioBuffer out(1, numFrames);
+    out.fill(0.0);
+
+    // Clear then process
     mixer.clearSources();
-    mixer.process(outputBuffer);
+    mixer.process(out);
 
-    // ASSERT: The output buffer should still be silent because the mixer is empty.
-    for (unsigned int i = 0; i < numFrames; ++i) {
-        EXPECT_NEAR(outputBuffer.at(0, i), 0.0, 1e-9);
+    for (unsigned i = 0; i < numFrames; ++i) {
+        EXPECT_NEAR(out.at(0, i), 0.0, 1e-9);
     }
 }
 
-// A stress test to verify that the atomic swap mechanism prevents data races
-// between a "writer" thread (like a dispatcher) and a "reader" thread (like the audio callback).
+// Stress test: writer adds/clears samplers while reader processes.
 TEST(MixerTest, ConcurrentReadWriteIsSafe) {
-    // ARRANGE: Create the mixer, buffer and flag.
-    pipsqueak::dsp::Mixer mixer;
-    pipsqueak::core::AudioBuffer outputBuffer(1, 16); // A dummy buffer for the reader
-    std::atomic<bool> stopFlag = false;
+    using namespace pipsqueak;
 
-    // 1. The "writer" thread simulates a dispatcher rapidly adding and clearing sources.
-    std::thread writerThread([&]() {
-        while (!stopFlag) {
-            // Create a brand new buffer and player on every iteration
-            auto sourceBuffer = std::make_shared<pipsqueak::core::AudioBuffer>(1, 16);
-            auto player = std::make_shared<pipsqueak::dsp::SamplePlayer>(sourceBuffer);
-            player->play();
+    dsp::Mixer mixer;
+    core::AudioBuffer out(1, 16);
+    std::atomic<bool> stop = false;
 
-            mixer.addSource(player);
+    // Writer simulates a dispatcher
+    std::thread writer([&](){
+        while (!stop.load(std::memory_order_relaxed)) {
+            auto src = makeMonoFilled(16, 0.1);
+            auto sampler = std::make_shared<dsp::Sampler>(src);
+            sampler->setNativeRate(48000.0);
+            sampler->setEngineRate(48000.0);
+            sampler->noteOn(48, 1.0f);
+
+            mixer.addSource(sampler);
             mixer.clearSources();
         }
     });
 
-    // 2. The "reader" thread simulates the real-time audio thread calling process().
-    std::thread readerThread([&]() {
-        while (!stopFlag) {
-            mixer.process(outputBuffer);
+    // Reader simulates the audio thread
+    std::thread reader([&](){
+        while (!stop.load(std::memory_order_relaxed)) {
+            mixer.process(out);
         }
     });
 
-    // ACT: Let the two threads run concurrently for a short duration.
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    // Signal both threads to stop.
-    stopFlag = true;
+    stop = true;
+    writer.join();
+    reader.join();
 
-    // Wait for both threads to finish their loops and exit.
-    writerThread.join();
-    readerThread.join();
-
-    // ASSERT: If the test completes without crashing or throwing an exception, it
-    // means the atomic swap successfully prevented any data races or memory
-    // corruption. The test passes by not failing.
     SUCCEED();
 }
